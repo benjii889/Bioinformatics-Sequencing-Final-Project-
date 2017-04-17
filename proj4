@@ -1,0 +1,172 @@
+"""
+Project 4
+"""
+
+
+
+def build_scoring_matrix(alphabet, diag_score, off_diag_score, dash_score):
+    """
+    Creates a score matrix given an alphabet and a designated scores
+    """
+    rows_matrix = {}
+    alphabet_copy = set(alphabet)
+    alphabet_copy.add("_")
+    for row_letter in alphabet_copy:
+        cols_matrix = {}
+        if row_letter == "_":
+            for col_letter in alphabet_copy:
+                cols_matrix[col_letter] = dash_score
+
+        else:
+            for col_letter in alphabet_copy:
+                if row_letter == col_letter:
+                    cols_matrix[col_letter] = diag_score
+                elif col_letter == "_":
+                    cols_matrix[col_letter] = dash_score
+                else:
+                    cols_matrix[col_letter] = off_diag_score
+
+        rows_matrix[row_letter] = cols_matrix
+    return rows_matrix
+
+def global_helper(seq_x, seq_y, scoring_matrix):
+    """
+    If global flag is True
+    """
+    num_rows = len(seq_x)
+    num_cols = len(seq_y)
+    alignment_matrix = []
+    alignment_matrix.append([0])
+    for i_value in range(1, num_rows + 1):
+        alignment_matrix.append([alignment_matrix[i_value - 1][0] + scoring_matrix[seq_x[i_value - 1]]["_"]])
+            
+    for j_value in range(1, num_cols + 1):
+        alignment_matrix[0].append(alignment_matrix[0][j_value - 1] + scoring_matrix["_"][seq_y[j_value - 1]])
+            
+    for i_value in range(1, num_rows + 1):
+        for j_value in range(1, num_cols + 1):
+            diagonal = alignment_matrix[i_value - 1][j_value - 1] + scoring_matrix[seq_x[i_value - 1]][seq_y[j_value - 1]]
+            vertical = alignment_matrix[i_value - 1][j_value] + scoring_matrix[seq_x[i_value - 1]]["_"]
+            horizontal = alignment_matrix[i_value][j_value - 1] + scoring_matrix[seq_y[j_value - 1]]["_"]
+            alignment_value = max([diagonal, vertical, horizontal])
+            alignment_matrix[i_value].append(alignment_value)
+    return alignment_matrix
+
+def compute_alignment_matrix(seq_x, seq_y, scoring_matrix, global_flag):
+    """
+    Creates an alignment matrix for two sequences given a scoring matrix
+    """
+    if global_flag:
+        return global_helper(seq_x, seq_y, scoring_matrix)
+    else:
+        num_rows = len(seq_x)
+        num_cols = len(seq_y)
+        alignment_matrix = []
+        alignment_matrix.append([0])
+        for i_value in range(1, num_rows + 1):
+            if alignment_matrix[i_value - 1][0] + scoring_matrix[seq_x[i_value - 1]]["_"] > 0:
+                alignment_matrix.append([alignment_matrix[i_value - 1][0] + scoring_matrix[seq_x[i_value - 1]]["_"]])
+            else:
+                alignment_matrix.append([0])    
+            
+        for j_value in range(1, num_cols + 1):
+            if alignment_matrix[0][j_value - 1] + scoring_matrix["_"][seq_y[j_value - 1]] > 0:
+                alignment_matrix[0].append(alignment_matrix[0][j_value - 1] + scoring_matrix["_"][seq_y[j_value - 1]])
+            else:
+                alignment_matrix[0].append(0)
+            
+        for i_value in range(1, num_rows + 1):
+            for j_value in range(1, num_cols + 1):
+                diagonal = alignment_matrix[i_value - 1][j_value - 1] + scoring_matrix[seq_x[i_value - 1]][seq_y[j_value - 1]]
+                vertical = alignment_matrix[i_value - 1][j_value] + scoring_matrix[seq_x[i_value - 1]]["_"]
+                horizontal = alignment_matrix[i_value][j_value - 1] + scoring_matrix["_"][seq_y[j_value - 1]]
+                alignment_value = max([0, diagonal, vertical, horizontal])
+                alignment_matrix[i_value].append(alignment_value)
+        return alignment_matrix
+
+def compute_global_alignment(seq_x, seq_y, scoring_matrix, alignment_matrix):
+    """
+    Computes a global alignment of the two sequences
+    given a scoring matrix and alignment matrix
+    """
+    i_value = len(seq_x)
+    j_value = len(seq_y)
+    x_prime = ""
+    y_prime = ""
+    score = alignment_matrix[i_value][j_value]
+    
+    while i_value != 0 and j_value != 0:
+        diagonal = alignment_matrix[i_value - 1][j_value - 1] + scoring_matrix[seq_x[i_value - 1]][seq_y[j_value - 1]]
+        vertical = alignment_matrix[i_value - 1][j_value] + scoring_matrix[seq_x[i_value - 1]]["_"]
+        if alignment_matrix[i_value][j_value] == diagonal:
+            x_prime = seq_x[i_value - 1] + x_prime
+            y_prime = seq_y[j_value - 1] + y_prime
+            i_value -= 1
+            j_value -= 1
+        else:
+            if alignment_matrix[i_value][j_value] == vertical:
+                x_prime = seq_x[i_value - 1] + x_prime
+                y_prime = "_" + y_prime
+                i_value -= 1
+            else:
+                y_prime = seq_y[j_value - 1] + y_prime
+                x_prime = "_" + x_prime
+                j_value -= 1
+                
+    while i_value != 0:
+        x_prime = seq_x[i_value - 1] + x_prime
+        y_prime = "_" + y_prime
+        i_value -= 1
+
+    while j_value != 0:
+        y_prime = seq_y[j_value - 1] + y_prime
+        x_prime = "_" + x_prime
+        j_value -= 1
+
+    return (score, x_prime, y_prime)
+
+def compute_local_alignment(seq_x, seq_y, scoring_matrix, alignment_matrix):
+    """
+    Computes a local alignment of the two sequences
+    given a scoring matrix and alignment matrix
+    """
+    i_value = 0
+    j_value = 0
+    x_prime = ""
+    y_prime = ""
+    max_score = 0
+    
+    for x_val in range(len(seq_x) + 1):
+        for y_val in range(len(seq_y) + 1):
+            score = alignment_matrix[x_val][y_val]
+            if max_score < score:
+                max_score = score
+                i_value = x_val
+                j_value = y_val
+                   
+    while alignment_matrix[i_value][j_value] != 0:
+        diagonal = alignment_matrix[i_value - 1][j_value - 1] + scoring_matrix[seq_x[i_value - 1]][seq_y[j_value - 1]]
+        vertical = alignment_matrix[i_value - 1][j_value] + scoring_matrix[seq_x[i_value - 1]]["_"]
+        if alignment_matrix[i_value][j_value] == diagonal:
+            x_prime = seq_x[i_value - 1] + x_prime
+            y_prime = seq_y[j_value - 1] + y_prime
+            i_value -= 1
+            j_value -= 1
+        else:
+            if alignment_matrix[i_value][j_value] == vertical:
+                x_prime = seq_x[i_value - 1] + x_prime
+                y_prime = "_" + y_prime
+                i_value -= 1
+            else:
+                y_prime = seq_y[j_value - 1] + y_prime
+                x_prime = "_" + x_prime
+                j_value -= 1
+
+    score = 0
+    for idx in range(len(x_prime)):
+        score += scoring_matrix[x_prime[idx]][y_prime[idx]]
+    
+    return (score, x_prime, y_prime)
+
+
+
